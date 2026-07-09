@@ -1,0 +1,6 @@
+provider=namecom
+domain=example.com
+host=@
+username=YOUR_USERNAME
+token=YOUR_API_TOKEN
+ttl=300
