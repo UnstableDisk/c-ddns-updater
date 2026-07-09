@@ -116,3 +116,65 @@ int http_get_basic_auth(const char *url,
     curl_easy_cleanup(curl);
     return 0;
 }
+
+int http_put_basic_auth(const char *url,
+                        const char *username,
+                        const char *password,
+			const char *json_body,
+                        char *buffer,
+                        int buffer_size)
+{
+    if (!url || !username || !password || !json_body || !buffer || buffer_size <= 0) {
+        return -1;
+    }
+
+    memset(buffer, '\0', buffer_size);
+
+    CURL *curl = curl_easy_init();
+    if (!curl) {
+        return -1;
+    }
+
+    char error_buffer[CURL_ERROR_SIZE];
+    error_buffer[0] = '\0';
+
+    struct HttpBuffer response = {
+        .data = buffer,
+        .capacity = (size_t)buffer_size,
+        .length = 0
+    };
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+    curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_body);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_buffer);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "c-ddns-updater/0.1");
+
+    struct curl_slist *headers = NULL;
+
+    headers = curl_slist_append(headers,
+                            "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    CURLcode result = curl_easy_perform(curl);
+
+    if (result != CURLE_OK) {
+        fprintf(stderr, "curl error: %s\n",
+                error_buffer[0] ? error_buffer : curl_easy_strerror(result));
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        return -1;
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    return 0;
+}

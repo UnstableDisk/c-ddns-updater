@@ -62,7 +62,36 @@ int namecom_find_a_record(const char *json, const Config *config, DnsRecord *rec
             return 0;
         }
     }
-
     cJSON_Delete(root);
     return 0;
+}
+
+int namecom_update_a_record(const Config *config,
+                            int record_id,
+                            const char *new_ip,
+                            char *buffer,
+                            int buffer_size)
+{
+    char url[512];
+    char json[512];
+
+    snprintf(url,
+             sizeof(url),
+             "https://api.name.com/core/v1/domains/%s/records/%d",
+             config->domain,
+             record_id);
+
+    snprintf(json,
+             sizeof(json),
+             "{\"host\":\"%s\",\"type\":\"A\",\"answer\":\"%s\",\"ttl\":%d}",
+             strcmp(config->host, "@") == 0 ? "" : config->host,
+             new_ip,
+             config->ttl);
+
+    return http_put_basic_auth(url,
+                               config->username,
+                               config->token,
+                               json,
+                               buffer,
+                               buffer_size);
 }

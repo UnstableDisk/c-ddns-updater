@@ -48,10 +48,46 @@ int main(void)
     printf("DNS record ID: %d\n", record.id);
 
     if (strcmp(ip, record.answer) == 0) {
-        printf("No update needed.\n");
-    } else {
-        printf("Update needed: %s -> %s\n", record.answer, ip);
+        printf("DNS is already up to date.\n");
+        return 0;
     }
 
+    printf("Updating DNS record: %s -> %s\n", record.answer, ip);
+
+    char update_response[8192] = {0};
+
+    if (namecom_update_a_record(&config,
+                                record.id,
+                                ip,
+                                update_response,
+                                sizeof(update_response)) != 0) {
+        printf("Failed to update DNS record.\n");
+        return 1;
+    }
+
+    memset(records_json, '\0', sizeof(records_json));
+
+    if (namecom_list_records(&config,
+                             records_json,
+                             sizeof(records_json)) != 0) {
+        printf("Verification failed.\n");
+        return 1;
+    }
+
+    if (namecom_find_a_record(records_json,
+                              &config,
+                              &record) != 0) {
+        printf("Verification parse failed.\n");
+        return 1;
+    }
+
+    printf("Verified DNS IP: %s\n", record.answer);
+
+    if (strcmp(ip, record.answer) == 0) {
+        printf("✓ Update verified!\n");
+    } else {
+        printf("✗ Verification failed.\n");
+        return 1;
+    }
     return 0;
 }
